@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/artusm/nuxt-2-spa-cache-fix-module/actions/workflows/ci.yml/badge.svg)](https://github.com/artusm/nuxt-2-spa-cache-fix-module/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/nuxt-2-spa-cache-fix-module.svg)](https://www.npmjs.com/package/nuxt-2-spa-cache-fix-module)
-[![license](https://img.shields.io/npm/l/nuxt-2-spa-cache-fix-module.svg)](https://github.com/artusm/nuxt-2-spa-cache-fix-module/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/nuxt-2-spa-cache-fix-module.svg)](https://github.com/artusm/nuxt-2-spa-cache-fix-module/blob/master/LICENSE)
 
 A Nuxt 2 module that fixes the unbounded LRU cache memory leak in `@nuxt/vue-renderer`'s `SPARenderer`. No file patching needed — works entirely via Nuxt's hook system.
 
