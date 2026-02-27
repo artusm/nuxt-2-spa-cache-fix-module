@@ -3,7 +3,7 @@ module.exports = function (moduleOptions) {
 
     this.nuxt.hook('render:resourcesLoaded', () => {
         try {
-            const vueRenderer = this.nuxt.renderer
+            const vueRenderer = this.nuxt.renderer?.renderer
             if (!vueRenderer) return
 
             const origCreateRenderer = vueRenderer.createRenderer

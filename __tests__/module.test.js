@@ -1,18 +1,29 @@
 const LRU = require('lru-cache')
 const nuxtSpaCacheFix = require('..')
 
+// Mirrors real Nuxt 2 structure:
+// nuxt.renderer (Server) → .renderer (VueRenderer) → .renderer { spa, ssr, modern }
 function createMockNuxt() {
     const hooks = {}
 
+    // VueRenderer mock
+    const vueRenderer = {
+        renderer: { spa: null },
+        createRenderer() {
+            // Simulates what Nuxt does — creates SPARenderer with unbounded cache
+            this.renderer.spa = { cache: new LRU() }
+        }
+    }
+
+    // Server mock (has .renderer pointing to VueRenderer)
+    const server = {
+        renderer: vueRenderer
+    }
+
     return {
         hooks,
-        renderer: {
-            renderer: { spa: null },
-            createRenderer() {
-                // Simulates what Nuxt does — creates SPARenderer with unbounded cache
-                this.renderer.spa = { cache: new LRU() }
-            }
-        },
+        server,
+        vueRenderer,
         nuxt: {
             hook(name, fn) {
                 hooks[name] = hooks[name] || []
@@ -22,7 +33,8 @@ function createMockNuxt() {
                 for (const fn of hooks[name] || []) {
                     await fn(...args)
                 }
-            }
+            },
+            renderer: null // set to server before calling hook
         }
     }
 }
@@ -31,15 +43,13 @@ describe('nuxt-spa-cache-fix', () => {
     test('wraps createRenderer and limits cache', async () => {
         const mock = createMockNuxt()
 
-        // Register module (binds to mock context)
         nuxtSpaCacheFix.call({ nuxt: mock.nuxt }, {})
 
-        // Simulate Nuxt lifecycle: resourcesLoaded → createRenderer
-        mock.nuxt.renderer = mock.renderer
+        mock.nuxt.renderer = mock.server
         await mock.nuxt.callHook('render:resourcesLoaded')
-        mock.renderer.createRenderer()
+        mock.vueRenderer.createRenderer()
 
-        expect(mock.renderer.renderer.spa.cache.max).toBe(100)
+        expect(mock.vueRenderer.renderer.spa.cache.max).toBe(100)
     })
 
     test('respects custom max option', async () => {
@@ -47,25 +57,25 @@ describe('nuxt-spa-cache-fix', () => {
 
         nuxtSpaCacheFix.call({ nuxt: mock.nuxt }, { max: 50 })
 
-        mock.nuxt.renderer = mock.renderer
+        mock.nuxt.renderer = mock.server
         await mock.nuxt.callHook('render:resourcesLoaded')
-        mock.renderer.createRenderer()
+        mock.vueRenderer.createRenderer()
 
-        expect(mock.renderer.renderer.spa.cache.max).toBe(50)
+        expect(mock.vueRenderer.renderer.spa.cache.max).toBe(50)
     })
 
     test('patches already existing renderer', async () => {
         const mock = createMockNuxt()
 
-        // Renderer already created before hook fires
-        mock.renderer.renderer.spa = { cache: new LRU() }
+        // SPA renderer already created before hook fires
+        mock.vueRenderer.renderer.spa = { cache: new LRU() }
 
         nuxtSpaCacheFix.call({ nuxt: mock.nuxt }, {})
 
-        mock.nuxt.renderer = mock.renderer
+        mock.nuxt.renderer = mock.server
         await mock.nuxt.callHook('render:resourcesLoaded')
 
-        expect(mock.renderer.renderer.spa.cache.max).toBe(100)
+        expect(mock.vueRenderer.renderer.spa.cache.max).toBe(100)
     })
 
     test('handles missing renderer gracefully', async () => {
@@ -88,10 +98,9 @@ describe('nuxt-spa-cache-fix', () => {
         const warnSpy = jest.spyOn(console, 'warn').mockImplementation()
         const hooks = {}
 
-        const renderer = {
+        const vueRenderer = {
             renderer: { spa: null },
             createRenderer() {
-                // Create spa with a setter that throws — simulates unexpected structure
                 const spa = {}
                 Object.defineProperty(spa, 'cache', {
                     set() { throw new Error('read-only cache') },
@@ -106,12 +115,12 @@ describe('nuxt-spa-cache-fix', () => {
             async callHook(name) {
                 for (const fn of hooks[name] || []) await fn()
             },
-            renderer
+            renderer: { renderer: vueRenderer }
         }
 
         nuxtSpaCacheFix.call({ nuxt: mockNuxt }, {})
         await mockNuxt.callHook('render:resourcesLoaded')
-        renderer.createRenderer()
+        vueRenderer.createRenderer()
 
         expect(warnSpy).toHaveBeenCalledWith(
             '[nuxt-2-spa-cache-fix-module] Failed to patch SPA cache:',
@@ -129,7 +138,7 @@ describe('nuxt-spa-cache-fix', () => {
             async callHook(name) {
                 for (const fn of hooks[name] || []) await fn()
             },
-            renderer: { createRenderer: null } // not a function — will throw
+            renderer: { renderer: { createRenderer: null } }
         }
 
         nuxtSpaCacheFix.call({ nuxt: mockNuxt }, {})
@@ -147,15 +156,14 @@ describe('nuxt-spa-cache-fix', () => {
 
         nuxtSpaCacheFix.call({ nuxt: mock.nuxt }, {})
 
-        mock.nuxt.renderer = mock.renderer
+        mock.nuxt.renderer = mock.server
         await mock.nuxt.callHook('render:resourcesLoaded')
 
-        // First call
-        mock.renderer.createRenderer()
-        expect(mock.renderer.renderer.spa.cache.max).toBe(100)
+        mock.vueRenderer.createRenderer()
+        expect(mock.vueRenderer.renderer.spa.cache.max).toBe(100)
 
-        // Simulate hot reload — createRenderer called again
-        mock.renderer.createRenderer()
-        expect(mock.renderer.renderer.spa.cache.max).toBe(100)
+        // Simulate hot reload
+        mock.vueRenderer.createRenderer()
+        expect(mock.vueRenderer.renderer.spa.cache.max).toBe(100)
     })
 })
