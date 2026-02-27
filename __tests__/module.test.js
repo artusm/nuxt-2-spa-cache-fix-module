@@ -84,6 +84,64 @@ describe('nuxt-spa-cache-fix', () => {
         await mockNuxt.callHook('render:resourcesLoaded')
     })
 
+    test('logs warning when createRenderer patch fails', async () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation()
+        const hooks = {}
+
+        const renderer = {
+            renderer: { spa: null },
+            createRenderer() {
+                // Create spa with a setter that throws — simulates unexpected structure
+                const spa = {}
+                Object.defineProperty(spa, 'cache', {
+                    set() { throw new Error('read-only cache') },
+                    get() { return null }
+                })
+                this.renderer.spa = spa
+            }
+        }
+
+        const mockNuxt = {
+            hook(name, fn) { hooks[name] = (hooks[name] || []).concat(fn) },
+            async callHook(name) {
+                for (const fn of hooks[name] || []) await fn()
+            },
+            renderer
+        }
+
+        nuxtSpaCacheFix.call({ nuxt: mockNuxt }, {})
+        await mockNuxt.callHook('render:resourcesLoaded')
+        renderer.createRenderer()
+
+        expect(warnSpy).toHaveBeenCalledWith(
+            '[nuxt-2-spa-cache-fix-module] Failed to patch SPA cache:',
+            expect.any(String)
+        )
+        warnSpy.mockRestore()
+    })
+
+    test('logs warning when hook initialization fails', async () => {
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation()
+        const hooks = {}
+
+        const mockNuxt = {
+            hook(name, fn) { hooks[name] = [fn] },
+            async callHook(name) {
+                for (const fn of hooks[name] || []) await fn()
+            },
+            renderer: { createRenderer: null } // not a function — will throw
+        }
+
+        nuxtSpaCacheFix.call({ nuxt: mockNuxt }, {})
+        await mockNuxt.callHook('render:resourcesLoaded')
+
+        expect(warnSpy).toHaveBeenCalledWith(
+            '[nuxt-2-spa-cache-fix-module] Failed to initialize:',
+            expect.any(String)
+        )
+        warnSpy.mockRestore()
+    })
+
     test('works on subsequent createRenderer calls (hot reload)', async () => {
         const mock = createMockNuxt()
 
