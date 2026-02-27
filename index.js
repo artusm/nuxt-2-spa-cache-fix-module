@@ -8,7 +8,7 @@ module.exports = function (moduleOptions) {
 
             const origCreateRenderer = vueRenderer.createRenderer
             vueRenderer.createRenderer = function () {
-                origCreateRenderer.call(this)
+                const result = origCreateRenderer.call(this)
                 try {
                     if (this.renderer.spa) {
                         const LRU = require('lru-cache')
@@ -17,6 +17,7 @@ module.exports = function (moduleOptions) {
                 } catch (err) {
                     console.warn('[nuxt-2-spa-cache-fix-module] Failed to patch SPA cache:', err.message)
                 }
+                return result
             }
 
             // Patch already created renderer (first load)
