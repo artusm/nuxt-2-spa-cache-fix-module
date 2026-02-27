@@ -133,7 +133,7 @@ The right value depends on your traffic patterns. Each cache entry holds the ren
 ## Compatibility
 
 - Nuxt 2.x (tested with 2.15–2.18)
-- Node.js 14, 16, 18
+- Node.js 16, 18, 20
 - Works with both `mode: 'spa'` and `mode: 'universal'` (SPA fallback)
 
 ## Development
