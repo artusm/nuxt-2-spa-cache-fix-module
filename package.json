@@ -1,0 +1,41 @@
+{
+  "name": "nuxt-2-spa-cache-fix-module",
+  "version": "1.0.0",
+  "description": "Fixes unbounded LRU cache in @nuxt/vue-renderer SPARenderer (Nuxt 2)",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "nuxt",
+    "nuxt2",
+    "spa",
+    "cache",
+    "lru-cache",
+    "memory-leak"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artusm/nuxt-2-spa-cache-fix-module.git"
+  },
+  "bugs": {
+    "url": "https://github.com/artusm/nuxt-2-spa-cache-fix-module/issues"
+  },
+  "homepage": "https://github.com/artusm/nuxt-2-spa-cache-fix-module#readme",
+  "engines": {
+    "node": ">=14"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "lru-cache": "^5.1.1"
+  },
+  "peerDependencies": {
+    "nuxt": "^2.0.0"
+  }
+}
